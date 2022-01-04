@@ -101,18 +101,29 @@ fn main() {
     f.write(&header_dip.num_colors.to_le_bytes()).unwrap();
     f.write(&header_dip.num_imp_colors.to_le_bytes()).unwrap();
 
-    let num_of_pixel = header_dip.width * header_dip.height;
+    // let num_of_pixel = header_dip.width * header_dip.height;
 
-    for i in 0..num_of_pixel {
-        let pixel = Pixel::new();
+    for j in 0..=header_dip.height {
+        for i in 0..header_dip.width {
+            //
+            let r = i as f32 / (header_dip.width - 1) as f32;
+            let g = j as f32 / (header_dip.height - 1) as f32;
+            let b = 0.25;
 
-        f.write(&pixel.b.to_le_bytes()).unwrap();
-        f.write(&pixel.g.to_le_bytes()).unwrap();
-        f.write(&pixel.r.to_le_bytes()).unwrap();
+            let mut pixel = Pixel::new();
+            pixel.r = (255.990_f32 * r) as u8;
+            pixel.g = (255.990_f32 * g) as u8;
+            pixel.b = (255.990_f32 * b) as u8;
 
-        let percentage = (i as f32 / num_of_pixel as f32) * 100_f32;
-        print!("\rProcessing {:.0}%", percentage);
+            f.write(&pixel.b.to_le_bytes()).unwrap();
+            f.write(&pixel.g.to_le_bytes()).unwrap();
+            f.write(&pixel.r.to_le_bytes()).unwrap();
+        }
+
+        let percentage = (j as f32 / header_dip.height as f32) * 100_f32;
+        print!("\rScanlines Progress {:.0}%", percentage);
         io::stdout().flush().unwrap();
     }
+
     println!();
 }
