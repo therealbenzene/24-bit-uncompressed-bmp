@@ -1,4 +1,4 @@
-use std::{fs::File, io, io::Write};
+use std::{cell::RefCell, fs::File, io, io::Write};
 
 struct BmpHeader {
     bitmat_signature_bytes: [u8; 2],
@@ -12,7 +12,7 @@ impl BmpHeader {
     fn new() -> BmpHeader {
         BmpHeader {
             bitmat_signature_bytes: [66, 77],
-            file_size: 54 + 786432,
+            file_size: 54 + 78643,
             creator_1: 0,
             creator_2: 0,
             pixel_offset: 54,
@@ -51,7 +51,6 @@ impl BmpDibHeader {
         }
     }
 }
-
 pub struct Pixel {
     pub r: u8,
     pub g: u8,
@@ -68,60 +67,103 @@ impl Pixel {
     }
 }
 
-// #[rustfmt::skip]
-// unsafe fn raw_byte_repr<'a, T>(ptr: &'a T) -> &'a [u8] {
+pub struct Image {
+    width: i32,
+    height: i32,
+    f: RefCell<File>,
+}
 
-//     std::slice::from_raw_parts(
-//         ptr as *const _ as *const u8,
-//         std::mem::size_of::<T>()
-//     )
-// }
+impl Image {
+    fn new(width: i32, height: i32, path: String) -> Image {
+        let file = RefCell::new(File::create(path).unwrap());
+        let header = BmpHeader::new();
+        let header_dip = BmpDibHeader::new();
+
+        file.borrow_mut()
+            .write(&header.bitmat_signature_bytes)
+            .unwrap();
+        file.borrow_mut()
+            .write(&header.file_size.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header.creator_1.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header.creator_2.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header.pixel_offset.to_le_bytes())
+            .unwrap();
+
+        file.borrow_mut()
+            .write(&header_dip.header_size.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.width.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.height.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.num_planes.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.bits_per_pixel.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.compress_type.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.data_size.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.hres.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.vres.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.num_colors.to_le_bytes())
+            .unwrap();
+        file.borrow_mut()
+            .write(&header_dip.num_imp_colors.to_le_bytes())
+            .unwrap();
+
+        return Image {
+            width: width,
+            height: height,
+            f: file,
+        };
+    }
+
+    fn write(&self, pixel: &Pixel) {
+        self.f.borrow_mut().write(&pixel.b.to_le_bytes()).unwrap();
+        self.f.borrow_mut().write(&pixel.g.to_le_bytes()).unwrap();
+        self.f.borrow_mut().write(&pixel.r.to_le_bytes()).unwrap();
+    }
+}
 
 fn main() {
-    let mut f = File::create("image.bmp").unwrap();
+    let image = Image::new(512, 512, String::from("image.bmp"));
 
-    let header = BmpHeader::new();
-    let header_dip = BmpDibHeader::new();
-
-    f.write(&header.bitmat_signature_bytes).unwrap();
-    f.write(&header.file_size.to_le_bytes()).unwrap();
-    f.write(&header.creator_1.to_le_bytes()).unwrap();
-    f.write(&header.creator_2.to_le_bytes()).unwrap();
-    f.write(&header.pixel_offset.to_le_bytes()).unwrap();
-
-    f.write(&header_dip.header_size.to_le_bytes()).unwrap();
-    f.write(&header_dip.width.to_le_bytes()).unwrap();
-    f.write(&header_dip.height.to_le_bytes()).unwrap();
-    f.write(&header_dip.num_planes.to_le_bytes()).unwrap();
-    f.write(&header_dip.bits_per_pixel.to_le_bytes()).unwrap();
-    f.write(&header_dip.compress_type.to_le_bytes()).unwrap();
-    f.write(&header_dip.data_size.to_le_bytes()).unwrap();
-    f.write(&header_dip.hres.to_le_bytes()).unwrap();
-    f.write(&header_dip.vres.to_le_bytes()).unwrap();
-    f.write(&header_dip.num_colors.to_le_bytes()).unwrap();
-    f.write(&header_dip.num_imp_colors.to_le_bytes()).unwrap();
-
-    // let num_of_pixel = header_dip.width * header_dip.height;
-
-    for j in 0..=header_dip.height {
-        for i in 0..header_dip.width {
+    for j in 0..=image.width {
+        for i in 0..image.width {
             //
-            let r = i as f32 / (header_dip.width - 1) as f32;
-            let g = j as f32 / (header_dip.height - 1) as f32;
+            let r = i as f32 / (image.width - 1) as f32;
+            let g = j as f32 / (image.height - 1) as f32;
             let b = 0.25;
 
             let mut pixel = Pixel::new();
-            pixel.r = (255.990_f32 * r) as u8;
-            pixel.g = (255.990_f32 * g) as u8;
-            pixel.b = (255.990_f32 * b) as u8;
+            pixel.r = (255.999 as f32 * r) as u8;
+            pixel.g = (255.999 as f32 * g) as u8;
+            pixel.b = (255.999 as f32 * b) as u8;
 
-            f.write(&pixel.b.to_le_bytes()).unwrap();
-            f.write(&pixel.g.to_le_bytes()).unwrap();
-            f.write(&pixel.r.to_le_bytes()).unwrap();
+            image.write(&pixel);
         }
 
-        let percentage = (j as f32 / header_dip.height as f32) * 100_f32;
+        let percentage = (j as f32 / (image.height + 0) as f32) * 100_f32;
         print!("\rScanlines Progress {:.0}%", percentage);
+
         io::stdout().flush().unwrap();
     }
 
