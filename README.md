@@ -1,1 +1,1 @@
-# 24-bit uncompressed bmp image file
+# write a 24-bit uncompressed bmp image
